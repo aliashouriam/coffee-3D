@@ -1,5 +1,5 @@
 "use client";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { useStore } from "@/lib/store";
 
@@ -7,20 +7,37 @@ export default function AmbientSound() {
   const { ambientPlaying, setAmbientPlaying } = useStore();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const togglePlayback = () => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio("/coffee/audio/coffee-shop.mp3");
-      audioRef.current.loop = true;
-      audioRef.current.volume = 0.3;
-    }
+  useEffect(() => {
+    audioRef.current = new Audio("/audio/coffee-shop.mp3");
+    audioRef.current.loop = true;
+    audioRef.current.volume = 0.3;
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!audioRef.current) return;
 
     if (ambientPlaying) {
-      audioRef.current.pause();
-      setAmbientPlaying(false);
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          console.error("خطا در پخش صدا:", error);
+          setAmbientPlaying(false);
+        });
+      }
     } else {
-      audioRef.current.play().catch(() => {});
-      setAmbientPlaying(true);
+      audioRef.current.pause();
     }
+  }, [ambientPlaying, setAmbientPlaying]);
+
+  const togglePlayback = () => {
+    setAmbientPlaying(!ambientPlaying);
   };
 
   return (
